@@ -66,7 +66,7 @@ void mqtt_loop() {
     }
   } else {
     // Client connected
-    Serial.println("Connected to MQTT");
+    //Serial.println("Connected to MQTT");
 
     client.loop();
   }
