@@ -27,7 +27,7 @@ void mqttSetup(){
       client.publish("/smartfeeder0001/mio", "SmartFeeder Booted");
       //mqtt_send("SmartFeeder Booted mqtt_send");
     }    else {
-      Serial.print("failed, rc=");
+      Serial.print("MQTT Connection failed, rc=");
       Serial.print(client.state());
       Serial.println(" try again in 5 seconds");
       // Wait 5 seconds before retrying
@@ -66,6 +66,7 @@ void mqtt_loop() {
     }
   } else {
     // Client connected
+    Serial.println("Connected to MQTT");
 
     client.loop();
   }
@@ -73,7 +74,6 @@ void mqtt_loop() {
 
 void mqtt_send(char* message){
 
-String message_time= String(hour()) + ":" + String(minute()) + ":" + String(second()) + " " + String(day()) + " " + String(month()) + " " + String(year()); 
     if (client.connect("smartfeeder0001", "smartfeeder0001", "abs0lutely")) {
 client.publish("/smartfeeder0001/mio", message);}
 }

@@ -1,3 +1,4 @@
+//will be removed in the future
 void I2C_Scanner(void) {
   while (!Serial)
   {

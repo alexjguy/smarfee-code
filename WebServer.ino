@@ -206,10 +206,10 @@ void handleTools(){
   //reply += F("<TR><TD>Interfaces<TD><a class=\"button-link\" href=\"/i2cscanner\">I2C Scan</a><BR><BR>");
   reply += F("<TR><TD>Firmware<TD><a class=\"button-link\" href=\"/firmware\">Update</a>");
   //reply += F("<a class=\"button-link\" href=\"/download\">Save</a>");
-        reply += F("<TR><TD>Temperature:<TD>");
-      RtcTemperature temp = Rtc.GetTemperature();
-      reply += temp.AsFloat();
-      reply += F("C");
+//        reply += F("<TR><TD>Temperature:<TD>");
+//      RtcTemperature temp = Rtc.GetTemperature();
+//      reply += temp.AsFloat();
+//      reply += F("C");
 
 
   reply += F("<TR><TD>Command<TD>");
@@ -299,7 +299,7 @@ void addHeader(boolean showMenu, String& str)
 //********************************************************************************
 void addFooter(String& str)
 {
-  str += F("<br>v0.7b<br>Press here to <a href=\"/login?DISCONNECT=YES\">logout</a></body></html>");
+  str += F("<br>v1.0a<br>Press here to <a href=\"/login?DISCONNECT=YES\">logout</a></body></html>");
   
   //<a href=\"www.altech-inspired.ro\">Powered by Altech Inspired</a>
 }

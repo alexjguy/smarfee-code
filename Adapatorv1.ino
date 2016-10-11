@@ -5,7 +5,6 @@
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 ESP8266WebServer server(80);
-#include <DS1307RTC.h>
 #include <ESP8266mDNS.h> //for_update
 #include <Servo.h>  //for_servo
 Servo servoMain;
@@ -15,8 +14,7 @@ Servo servoMain;
 #include <PubSubClient.h>
 ///
 #include <pgmspace.h>
-#include <RtcDS3231.h>
-RtcDS3231 Rtc;
+
 
 #define RtcSquareWavePin 13 // Mega2560
 
@@ -61,7 +59,7 @@ void setup(void) {
   // Wait for connection
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    Serial.print(".");
+    Serial.println("Trying to connect to WiFi");
   }
   Serial.println("");
   Serial.print("Connected to ");
@@ -81,48 +79,48 @@ void setup(void) {
   do_sendNTPpacket();
 
 
-  rtcAlarmSetup();
-  I2C_Scanner();
+  //rtcAlarmSetup();
+  //I2C_Scanner();
   mqttSetup(); 
 }
 
 void loop(void) {
   
   // wait ten seconds before asking for the time again
-  digitalClockDisplay();
-  //  delay(10000);
+  // digitalClockDisplay();
 
-  if (!Rtc.IsDateTimeValid())
-  {
-    Serial.println("RTC lost confidence in the DateTime!");
-    do_sendNTPpacket();
-  }
 
-  RtcDateTime now = Rtc.GetDateTime();
-  RtcTemperature temp = Rtc.GetTemperature();
-  Serial.print(temp.AsFloat());
-  Serial.println("C");
+//  if (!Rtc.IsDateTimeValid())
+//  {
+//    Serial.println("RTC lost confidence in the DateTime!");
+//    do_sendNTPpacket();
+//  }
 
-  printDateTime(now);
+//  RtcDateTime now = Rtc.GetDateTime();
+//  RtcTemperature temp = Rtc.GetTemperature();
+//  Serial.print(temp.AsFloat());
+//  Serial.println("C");
+
+//  printDateTime(now);
   Serial.println();
 
   // we only want to show time every 10 seconds
-  // but we want to show responce to the interupt firing
+  // but we ndswant to show responce to the interupt firing
   for (int timeCount = 0; timeCount < 20; timeCount++)
   {
-    if (Alarmed())
-    {
-      Serial.print(">>Interupt Count: ");
-      Serial.print(interuptCount);
-      Serial.println("<<");
-    }
+//    if (Alarmed())
+//    {
+//      Serial.print(">>Interupt Count: ");
+//      Serial.print(interuptCount);
+//      Serial.println("<<");
+//    }
 
     server.handleClient();
 
     delay(500);
-    mqtt_loop();
+    
   }
-  
+  mqtt_loop();
 
 }
 

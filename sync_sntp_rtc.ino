@@ -70,7 +70,7 @@ void do_sendNTPpacket(){
       Serial.println(epoch);
      
 
-      RTC.set(epoch);   // set the RTC and the system time to the received value
+      //RTC.set(epoch);   // set the RTC and the system time to the received value
       setTime(epoch);          
 
     // print the hour, minute and second:
