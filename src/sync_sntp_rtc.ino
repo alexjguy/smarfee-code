@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 
 // send an NTP request to the time server at the given address
 unsigned long sendNTPpacket(IPAddress& address)

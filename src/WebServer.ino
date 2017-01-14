@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 void httpServerSetup(){
 
   server.on("/", handleRoot);

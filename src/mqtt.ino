@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 // Update these with values suitable for your network.
 long lastReconnectAttempt = 0;
 const char* mqtt_server = "192.168.0.44";
@@ -50,14 +52,16 @@ boolean reconnect() {
       Serial.println(" try again in 5 seconds");
       // Wait 5 seconds before retrying
     }
-      
+
   }
 
 
 void mqtt_loop() {
     if (!client.connected()) {
     long now = millis();
-    if (now - lastReconnectAttempt > 5000) {
+//    if (now - lastReconnectAttempt > 5000) {
+      if (now - lastReconnectAttempt > 100) {
+
       lastReconnectAttempt = now;
       // Attempt to reconnect
       if (reconnect()) {
@@ -77,4 +81,3 @@ void mqtt_send(char* message){
     if (client.connect("smartfeeder0001", "smartfeeder0001", "abs0lutely")) {
 client.publish("/smartfeeder0001/mio", message);}
 }
-

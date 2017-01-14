@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 //#include <WiFiMDNSResponder.h>
 #include <WiFiServer.h>
 #include <TimeLib.h>
@@ -8,23 +10,22 @@ ESP8266WebServer server(80);
 #include <ESP8266mDNS.h> //for_update
 #include <Servo.h>  //for_servo
 Servo servoMain;
-#include <Wire.h> // I2C
+//#include <Wire.h> // I2C
 #include <WiFiUdp.h>
 #include <SPI.h>
 #include <PubSubClient.h>
 ///
 #include <pgmspace.h>
+#include <TimeAlarms.h>
 
-
-#define RtcSquareWavePin 13 // Mega2560
-
-#define RtcSquareWaveInterrupt 13 // Mega2560
-
-// marked volatile so interrupt can safely modify them and
-// other code can safely read and modify them
-volatile uint16_t interuptCount = 0;
-volatile bool interuptFlag = false;
-
+#include <Stepper.h>
+const int stepsPerRevolution = 32;  // change this to fit the number of steps per revolution
+// for your motor
+const int IN1 = 16;
+const int IN2 = 5;
+const int IN3 = 4;
+const int IN4 = 0;
+Stepper myStepper(stepsPerRevolution, IN1, IN2, IN3, IN4);
 ///////////////
 
 /////////////
@@ -42,7 +43,7 @@ byte packetBuffer[ NTP_PACKET_SIZE]; //buffer to hold incoming and outgoing pack
 
 // A UDP instance to let us send and receive packets over UDP
 WiFiUDP udp;
-/////////////// 
+///////////////
 ////////////
 
 const char* ssid = "athome_24";
@@ -69,7 +70,7 @@ void setup(void) {
 
 
   httpServerSetup();
-  Wire.begin();
+  //Wire.begin();
 
 
   Serial.println("Starting UDP");
@@ -78,49 +79,38 @@ void setup(void) {
   Serial.println(udp.localPort());
   do_sendNTPpacket();
 
+  mqttSetup();
 
-  //rtcAlarmSetup();
-  //I2C_Scanner();
-  mqttSetup(); 
+  Alarm.alarmRepeat(7,00,0, MorningAlarm);  // 8:30am every day
+  Alarm.alarmRepeat(17,30,0,EveningAlarm);  // 5:45pm every day
+  pinMode(IN1,OUTPUT);
+  pinMode(IN2,OUTPUT);
+  pinMode(IN3,OUTPUT);
+  pinMode(IN4,OUTPUT);
+
+  myStepper.setSpeed(15);
+
 }
 
 void loop(void) {
-  
-  // wait ten seconds before asking for the time again
-  // digitalClockDisplay();
 
 
-//  if (!Rtc.IsDateTimeValid())
-//  {
-//    Serial.println("RTC lost confidence in the DateTime!");
-//    do_sendNTPpacket();
-//  }
-
-//  RtcDateTime now = Rtc.GetDateTime();
-//  RtcTemperature temp = Rtc.GetTemperature();
-//  Serial.print(temp.AsFloat());
-//  Serial.println("C");
-
-//  printDateTime(now);
   Serial.println();
 
   // we only want to show time every 10 seconds
   // but we ndswant to show responce to the interupt firing
   for (int timeCount = 0; timeCount < 20; timeCount++)
   {
-//    if (Alarmed())
-//    {
-//      Serial.print(">>Interupt Count: ");
-//      Serial.print(interuptCount);
-//      Serial.println("<<");
-//    }
+
 
     server.handleClient();
 
     delay(500);
-    
+
   }
   mqtt_loop();
+  forward(4096,1);
+  //myStepper.step(stepsPerRevolution);
+delay(500);
 
 }
-
