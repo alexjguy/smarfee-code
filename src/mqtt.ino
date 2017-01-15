@@ -2,7 +2,7 @@
 
 // Update these with values suitable for your network.
 long lastReconnectAttempt = 0;
-const char* mqtt_server = "192.168.0.44";
+
 
 void callback(char* topic, byte* payload, unsigned int length) {
   Serial.print("Message arrived [");

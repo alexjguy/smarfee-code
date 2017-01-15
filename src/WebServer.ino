@@ -53,7 +53,7 @@ void httpServerSetup(){
   size_t headerkeyssize = sizeof(headerkeys) / sizeof(char*);
   //ask server to track these headers
   server.collectHeaders(headerkeys, headerkeyssize );
-  
+
   server.begin();
   MDNS.addService("http", "tcp", 80);
   Serial.println("HTTP server started");
@@ -113,7 +113,8 @@ void handleRoot() {
     if (server.arg("cmd") == "feed")
     {
       String header = "HTTP/1.1 301 OK\r\nCmd: /\r\nCache-Control: no-cache\r\n\r\n";
-      servoFeed();
+      //servoFeed();
+      stepperFeed(2048,1);
       server.sendContent(header);
       return;
     }
@@ -138,7 +139,7 @@ void handleRoot() {
    addFooter(reply);
 
 
-  
+
   server.send(200, "text/html", reply);
 }
 
@@ -158,7 +159,7 @@ void handleConfig() {
     {
       String header = "HTTP/1.1 301 OK\r\nCmd: /\r\nCache-Control: no-cache\r\n\r\n";
       servoFeed();
-      
+
       server.sendContent(header);
       return;
     }
@@ -179,7 +180,7 @@ void handleConfig() {
    addFooter(reply);
 
 
-  
+
   server.send(200, "text/html", reply);
 }
 
@@ -191,7 +192,7 @@ void handleTools(){
 
   String reply = "";
   addHeader(true, reply);
- 
+
   reply += F("<form>");
   reply += F("<table><TH>Tools<TH>");
           reply += F("<TR><TD>Connected to:<TD>");
@@ -219,7 +220,7 @@ void handleTools(){
  // reply += webrequest;
   reply += F("'><TR><TD><TD><input class=\"button-link\" type='submit' value='Submit'><TR><TD>");
     reply += F("<TR><TD>Boot cause:<TD>");
-  
+
 
   reply += F("</table></form>");
   addFooter(reply);
@@ -302,7 +303,7 @@ void addHeader(boolean showMenu, String& str)
 void addFooter(String& str)
 {
   str += F("<br>v1.0a<br>Press here to <a href=\"/login?DISCONNECT=YES\">logout</a></body></html>");
-  
+
   //<a href=\"www.altech-inspired.ro\">Powered by Altech Inspired</a>
 }
 
@@ -321,6 +322,3 @@ bool is_authentified() {
   Serial.println("Authentification Failed");
   return false;
 }
-
-
-

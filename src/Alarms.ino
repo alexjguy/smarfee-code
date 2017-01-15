@@ -4,12 +4,14 @@
 // functions to be called when an alarm triggers:
 void MorningAlarm(){
   Serial.println("Alarm: - Mio morning Feed");
-  servoFeed();
+  //servoFeed();
+  stepperFeed(2048,1);
 }
 
 void EveningAlarm(){
   Serial.println("Alarm: - Mio evening Feed");
-  servoFeed();
+  //servoFeed();
+  stepperFeed(2048,1);
 }
 
 //void WeeklyAlarm(){

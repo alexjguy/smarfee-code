@@ -1,5 +1,6 @@
-#include <Arduino.h>
+#include <FS.h>                   //this needs to be first, or it all crashes and burns...
 
+#include <Arduino.h>
 //#include <WiFiMDNSResponder.h>
 #include <WiFiServer.h>
 #include <TimeLib.h>
@@ -14,19 +15,29 @@ Servo servoMain;
 #include <WiFiUdp.h>
 #include <SPI.h>
 #include <PubSubClient.h>
-///
+
 #include <pgmspace.h>
 #include <TimeAlarms.h>
+#include <DNSServer.h>            //Local DNS Server used for redirecting all requests to the configuration portal
+#include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager WiFi Configuration Magic
+#include <ArduinoJson.h>          //https://github.com/bblanchon/ArduinoJson
 
-#include <Stepper.h>
-const int stepsPerRevolution = 32;  // change this to fit the number of steps per revolution
+
 // for your motor
 const int IN1 = 16;
 const int IN2 = 5;
 const int IN3 = 4;
 const int IN4 = 0;
-Stepper myStepper(stepsPerRevolution, IN1, IN2, IN3, IN4);
-///////////////
+
+//for button
+const int button1 = 12;
+boolean buttonActive = false;
+boolean longPressActive = false;
+boolean button1Active = false;
+long buttonTimer = 0;
+long buttonTime = 250;
+
+const int ledPin = 14;       // the pin that the LED is attached to
 
 /////////////
 unsigned int localPort = 2390;      // local port to listen for UDP packets
@@ -51,22 +62,141 @@ const char* password = "athome#$";
 
 const char* serverIndex = "<form method='POST' action='/update' enctype='multipart/form-data'><input type='file' name='update'><input type='submit' value='Update'></form>";
 
+char mqtt_server[40] = "192.168.0.44";
+char mqtt_port[6] = "8080";
+
+
+//flag for saving data
+bool shouldSaveConfig = true;
+
+//callback notifying us of the need to save config
+void saveConfigCallback () {
+  Serial.println("Should save config");
+  shouldSaveConfig = true;
+}
+
 
 void setup(void) {
+  pinMode(ledPin, OUTPUT);
+  ledState("blinkOnce");
+
   Serial.begin(115200);
-  WiFi.begin(ssid, password);
+//  WiFi.begin(ssid, password);
   Serial.println("");
 
-  // Wait for connection
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.println("Trying to connect to WiFi");
-  }
-  Serial.println("");
-  Serial.print("Connected to ");
-  Serial.println(ssid);
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
+
+    //clean FS, for testing
+    //SPIFFS.format();
+
+    //read configuration from FS json
+    Serial.println("mounting FS...");
+
+    if (SPIFFS.begin()) {
+      Serial.println("mounted file system");
+      if (SPIFFS.exists("/config.json")) {
+        //file exists, reading and loading
+        Serial.println("reading config file");
+        File configFile = SPIFFS.open("/config.json", "r");
+        if (configFile) {
+          Serial.println("opened config file");
+          size_t size = configFile.size();
+          // Allocate a buffer to store contents of the file.
+          std::unique_ptr<char[]> buf(new char[size]);
+
+          configFile.readBytes(buf.get(), size);
+          DynamicJsonBuffer jsonBuffer;
+          JsonObject& json = jsonBuffer.parseObject(buf.get());
+          json.printTo(Serial);
+          if (json.success()) {
+            Serial.println("\nparsed json");
+
+            strcpy(mqtt_server, json["mqtt_server"]);
+            strcpy(mqtt_port, json["mqtt_port"]);
+
+          } else {
+            Serial.println("failed to load json config");
+          }
+        }
+      }
+    } else {
+      Serial.println("failed to mount FS");
+    }
+    //end read
+
+
+
+    // The extra parameters to be configured (can be either global or just in the setup)
+    // After connecting, parameter.getValue() will get you the configured value
+    // id/name placeholder/prompt default length
+    WiFiManagerParameter custom_mqtt_server("server", "mqtt server", mqtt_server, 40);
+    WiFiManagerParameter custom_mqtt_port("port", "mqtt port", mqtt_port, 6);
+
+    //WiFiManager
+    //Local intialization. Once its business is done, there is no need to keep it around
+    WiFiManager wifiManager;
+
+    //set config save notify callback
+    wifiManager.setSaveConfigCallback(saveConfigCallback);
+
+    //set static ip
+    //wifiManager.setSTAStaticIPConfig(IPAddress(10,0,1,99), IPAddress(10,0,1,1), IPAddress(255,255,255,0));
+
+    //add all your parameters here
+    wifiManager.addParameter(&custom_mqtt_server);
+    wifiManager.addParameter(&custom_mqtt_port);
+
+    //reset settings - for testing
+    //wifiManager.resetSettings();
+
+    //set minimu quality of signal so it ignores AP's under that quality
+    //defaults to 8%
+    //wifiManager.setMinimumSignalQuality();
+
+    //sets timeout until configuration portal gets turned off
+    //useful to make it all retry or go to sleep
+    //in seconds
+    wifiManager.setTimeout(300);
+
+    //fetches ssid and pass and tries to connect
+    //if it does not connect it starts an access point with the specified name
+    //here  "AutoConnectAP"
+    //and goes into a blocking loop awaiting configuration
+    if (!wifiManager.autoConnect("SmartFeeder","1234567890")) {
+      Serial.println("failed to connect and hit timeout");
+      delay(3000);
+      //reset and try again, or maybe put it to deep sleep
+      ESP.reset();
+      delay(5000);
+    }
+
+      //if you get here you have connected to the WiFi
+      Serial.println("connected...yeey :)");
+
+      //read updated parameters
+      strcpy(mqtt_server, custom_mqtt_server.getValue());
+      strcpy(mqtt_port, custom_mqtt_port.getValue());
+
+      //save the custom parameters to FS
+      if (shouldSaveConfig) {
+        Serial.println("saving config");
+        DynamicJsonBuffer jsonBuffer;
+        JsonObject& json = jsonBuffer.createObject();
+        json["mqtt_server"] = mqtt_server;
+        json["mqtt_port"] = mqtt_port;
+
+        File configFile = SPIFFS.open("/config.json", "w");
+        if (!configFile) {
+          Serial.println("failed to open config file for writing");
+        }
+
+        json.printTo(Serial);
+        json.printTo(configFile);
+        configFile.close();
+        //end save
+      }
+
+      Serial.println("local ip");
+      Serial.println(WiFi.localIP());
 
 
   httpServerSetup();
@@ -88,29 +218,74 @@ void setup(void) {
   pinMode(IN3,OUTPUT);
   pinMode(IN4,OUTPUT);
 
-  myStepper.setSpeed(15);
+  pinMode(button1, INPUT);
+  ledState("blinkTwice");
+  ledState("On");
+
 
 }
 
 void loop(void) {
 
 
-  Serial.println();
-
-  // we only want to show time every 10 seconds
-  // but we ndswant to show responce to the interupt firing
-  for (int timeCount = 0; timeCount < 20; timeCount++)
-  {
-
-
+  // this keeps the small loop running at 100ms and returns
+  // to the large loop after 10 seconds
+  for (int timeCount = 0; timeCount < 100; timeCount++){
     server.handleClient();
+    delay(100);
 
-    delay(500);
+    if (digitalRead(button1) == HIGH) {
+      if (buttonActive == false) {
+        buttonActive = true;
+        buttonTimer = millis();		}
+      button1Active = true;
+    }
+
+    if ((buttonActive == true) && (millis() - buttonTimer > buttonTime) && (longPressActive == false)) {
+
+      longPressActive = true;
+
+      if (button1Active == true){
+
+      Serial.println("Long press active");
+
+      } else {
+
+      }
+    }
+
+    if ((buttonActive == true) && (digitalRead(button1) == LOW)) {
+
+      if (longPressActive == true) {
+
+        longPressActive = false;
+
+      } else {
+
+        if (button1Active == true) {
+
+          Serial.println("button active");
+
+        } else {
+
+          Serial.println("button inactive");
+
+
+        }
+
+      }
+
+      buttonActive = false;
+      button1Active = false;
+
+
+    }
 
   }
-  mqtt_loop();
-  forward(4096,1);
-  //myStepper.step(stepsPerRevolution);
-delay(500);
+  //mqtt_loop();
+
+//delay(500);
+
+
 
 }
