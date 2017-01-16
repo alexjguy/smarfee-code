@@ -29,17 +29,29 @@ const int IN2 = 5;
 const int IN3 = 4;
 const int IN4 = 0;
 
-//for button
+// defined for button1
 const int button1 = 12;
 boolean buttonActive = false;
 boolean longPressActive = false;
 boolean button1Active = false;
 long buttonTimer = 0;
-long buttonTime = 250;
+long buttonTime = 3000;
+// defined for button1
 
+// alt button
+int buttonState = 0;     // current state of the button
+int lastButtonState = 0; // previous state of the button
+int startPressed = 0;    // the time button was pressed
+int endPressed = 0;      // the time button was released
+int timeHold = 0;        // the time button is hold
+int timeReleased = 0;    // the time button is released
+// alt button
+
+// defined for status LED
 const int ledPin = 14;       // the pin that the LED is attached to
+//
 
-/////////////
+// defined for NTP
 unsigned int localPort = 2390;      // local port to listen for UDP packets
 
 /* Don't hardwire the IP address or we won't get the benefits of the pool.
@@ -54,8 +66,7 @@ byte packetBuffer[ NTP_PACKET_SIZE]; //buffer to hold incoming and outgoing pack
 
 // A UDP instance to let us send and receive packets over UDP
 WiFiUDP udp;
-///////////////
-////////////
+// defined for NTP
 
 const char* ssid = "athome_24";
 const char* password = "athome#$";
@@ -75,8 +86,15 @@ void saveConfigCallback () {
   shouldSaveConfig = true;
 }
 
+extern "C" {
+#include "user_interface.h"
+}
+
 
 void setup(void) {
+  //system_update_cpu_freq(80);
+  system_update_cpu_freq(160);
+
   pinMode(ledPin, OUTPUT);
   ledState("blinkOnce");
 
@@ -234,58 +252,62 @@ void loop(void) {
     server.handleClient();
     delay(100);
 
-    if (digitalRead(button1) == HIGH) {
-      if (buttonActive == false) {
-        buttonActive = true;
-        buttonTimer = millis();		}
-      button1Active = true;
-    }
-
-    if ((buttonActive == true) && (millis() - buttonTimer > buttonTime) && (longPressActive == false)) {
-
-      longPressActive = true;
-
-      if (button1Active == true){
-
-      Serial.println("Long press active");
-
-      } else {
-
-      }
-    }
-
-    if ((buttonActive == true) && (digitalRead(button1) == LOW)) {
-
-      if (longPressActive == true) {
-
-        longPressActive = false;
-
-      } else {
-
-        if (button1Active == true) {
-
-          Serial.println("button active");
-
-        } else {
-
-          Serial.println("button inactive");
 
 
-        }
+    // read the pushbutton input pin:
+     buttonState = digitalRead(button1);
 
-      }
+     // button state changed
+     if (buttonState != lastButtonState) {
 
-      buttonActive = false;
-      button1Active = false;
+         // the button was just pressed
+         if (buttonState == HIGH) {
+             startPressed = millis();
+             timeReleased = startPressed - endPressed;
+
+             if (timeReleased >= 500 && timeReleased < 1000) {
+                 Serial.println("Button idle for half a second");
+             }
+
+             if (timeReleased >= 2800 && timeReleased <=6000) {
+                 Serial.println("Button idle for 3 seconds");
+             }
+
+             if (timeReleased >= 9000 && timeReleased <= 10500) {
+                 Serial.println("Button idle for 10 seconds");
+             }
+
+         // the button was just released
+         } else {
+             endPressed = millis();
+             timeHold = endPressed - startPressed;
+
+             if (timeHold >= 100 && timeHold < 1000) {
+                 Serial.println("Button hold for less than a second");
+                 stepperFeed(2048,1);
+             }
+
+             if (timeHold >= 2800 && timeHold <= 6000) {
+                 Serial.println("Button hold for 3 seconds");
+                 yield();
+             }
+
+             if (timeHold >= 9000 && timeHold <= 10500) {
+                 Serial.println("Button hold for 10 seconds");
+             }
+
+         }
+
+     }
+
+     // save the current state as the last state,
+     //for next time through the loop
+     lastButtonState = buttonState;
 
 
-    }
 
   }
+  ESP.getCpuFreqMHz();
   //mqtt_loop();
-
 //delay(500);
-
-
-
 }
