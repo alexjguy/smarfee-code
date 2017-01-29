@@ -1,4 +1,4 @@
-#include <Arduino.h>
+
 
 // Update these with values suitable for your network.
 long lastReconnectAttempt = 0;

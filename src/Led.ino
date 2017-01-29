@@ -1,4 +1,3 @@
-#include <Arduino.h>
 
 void ledState(const char* action){
 if (action == "blinkOnce"){

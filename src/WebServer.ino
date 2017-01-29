@@ -1,10 +1,7 @@
-#include <Arduino.h>
-
 void httpServerSetup(){
 
   server.on("/", handleRoot);
   server.on("/login", handleLogin);
-  server.on("/tools", handleTools);
   server.on("/config", handleConfig);
   server.on("/inline", []() {
     server.send(200, "text/plain", "this works without need of authentification");
@@ -113,7 +110,6 @@ void handleRoot() {
     if (server.arg("cmd") == "feed")
     {
       String header = "HTTP/1.1 301 OK\r\nCmd: /\r\nCache-Control: no-cache\r\n\r\n";
-      //servoFeed();
       stepperFeed(2048,1);
       server.sendContent(header);
       return;
@@ -121,20 +117,18 @@ void handleRoot() {
   }
     String reply = "";
     addHeader(true, reply);
-    reply += F("<form>");
-    reply += F("<table><TH>System Info<TH><TH>");
 
-      reply += F("<TR><TD>System Time:<TD>");
+      reply += F("<div class=\"main\"><div class=\"container\"><div class=\"row\">");
+
+      reply += F("System Time");
       reply += hour();
       reply += ":";
       if (minute() < 10)
         reply += "0";
       reply += minute();
+      reply += F("</div>");
 
-
-     reply += F("<TR><TD>Tools<TD><a class=\"button-link\" href=\"?cmd=feed\">Feed Pet</a>");
-
-     reply += F("</table></form>");
+      reply += F("<div class=\"row\"><a class=\"button-link\" href=\"?cmd=feed\">Feed Pet</a></div></div></div>");
 
    addFooter(reply);
 
@@ -158,7 +152,7 @@ void handleConfig() {
     if (server.arg("cmd") == "alarm1Set" && server.arg("hour") != "" && server.arg("cmd") != "")
     {
       String header = "HTTP/1.1 301 OK\r\nCmd: /\r\nCache-Control: no-cache\r\n\r\n";
-      servoFeed();
+      stepperFeed(2048,1);
 
       server.sendContent(header);
       return;
@@ -184,49 +178,6 @@ void handleConfig() {
   server.send(200, "text/html", reply);
 }
 
-void handleTools(){
-
-   if (!is_authentified()) return;
-
- // String webrequest = WebServer.arg("cmd");
-
-  String reply = "";
-  addHeader(true, reply);
-
-  reply += F("<form>");
-  reply += F("<table><TH>Tools<TH>");
-          reply += F("<TR><TD>Connected to:<TD>");
-        reply += ssid;
-        reply += F("<TR><TD>IP:<TD>");
-        reply += WiFi.localIP();
-
-  //reply += F("<TR><TD>Tools<TD><a class=\"button-link\" href=\"/servo\">Feed Pet</a>");
-  //reply += F("<a class=\"button-link\" href=\"log\">Log</a>");
-  //reply += F("<a class=\"button-link\" href=\"advanced\">Advanced</a><BR><BR>");
-  //reply += F("<TR><TD>Wifi<TD><a class=\"button-link\" href=\"/?cmd=wificonnect\">Connect</a>");
-  //reply += F("<a class=\"button-link\" href=\"/?cmd=wifidisconnect\">Disconnect</a>");
-  //reply += F("<a class=\"button-link\" href=\"/wifiscanner\">Scan</a><BR><BR>");
-  //reply += F("<TR><TD>Interfaces<TD><a class=\"button-link\" href=\"/i2cscanner\">I2C Scan</a><BR><BR>");
-  reply += F("<TR><TD>Firmware<TD><a class=\"button-link\" href=\"/firmware\">Update</a>");
-  //reply += F("<a class=\"button-link\" href=\"/download\">Save</a>");
-//        reply += F("<TR><TD>Temperature:<TD>");
-//      RtcTemperature temp = Rtc.GetTemperature();
-//      reply += temp.AsFloat();
-//      reply += F("C");
-
-
-  reply += F("<TR><TD>Command<TD>");
-  reply += F("<input type='text' name='cmd' value='");
- // reply += webrequest;
-  reply += F("'><TR><TD><TD><input class=\"button-link\" type='submit' value='Submit'><TR><TD>");
-    reply += F("<TR><TD>Boot cause:<TD>");
-
-
-  reply += F("</table></form>");
-  addFooter(reply);
-  server.send(200, "text/html", reply);
-
-}
 
 //no need authentification
 void handleNotFound() {
@@ -253,46 +204,51 @@ void addHeader(boolean showMenu, String& str)
   str += F("<script language=\"javascript\"><!--\n");
   str += F("function dept_onchange(frmselect) {frmselect.submit();}\n");
   str += F("//--></script>");
-  str += F("<head><title>");
- // str += Settings.Name;
-  str += F("</title>");
+  str += F("<head><title> Smart Feeder</title>");
 
   if (!cssfile)
   {
     str += F("<style>");
-    str += F("* {font-family:sans-serif; font-size:12pt;}");
-    str += F("h1 {font-size:16pt; color:black;}");
+    str += F("* {font-family:sans-serif; font-size:12pt; box-sizing: border-box;}");
+    str += F("h1 {font-size:2em; color:white; margin: 5px auto; text-align: center; padding: 5px;}");
     str += F("h6 {font-size:10pt; color:black; text-align:center;}");
-    str += F(".button-menu {background-color:#ffffff; color:blue; margin: 10px; text-decoration:none}");
-    str += F(".button-link {padding:5px 15px; background-color:#0077dd; color:#fff; border:solid 1px #fff; text-decoration:none}");
-    str += F(".button-menu:hover {background:#ddddff;}");
-    str += F(".button-link:hover {background:#369;}");
+    str += F(".button-menu {width:50px;background-color: #E96725; color:white;  text-decoration:none; border: 1px solid black; padding: 10px;}");
+    str += F(".button-link {padding:5px 15px; background-color:#E96725; color:white; border:solid 1px white; text-decoration:none}");
+    str += F(".button-menu:hover {background:#FFB38F;}");
+    str += F(".button-link:hover {background:#FFB38F;}");
     str += F("th {padding:10px; background-color:black; color:#ffffff;}");
     str += F("td {padding:7px;}");
     str += F("table {color:black;}");
     str += F(".div_l {float: left;}");
     str += F(".div_r {float: right; margin: 2px; padding: 1px 10px; border-radius: 7px; background-color:#080; color:white;}");
     str += F(".div_br {clear: both;}");
+    str += F(".menu {float: both;display: block; background-color: #FF884C; magin: auto; position:relative; height: 110px; text-align:center; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);}");
+    str += F(".menu-item {margin: 15px auto; display: inline-block; }");
+    str += F("ul {list-style-type: none;}");
+    str += F("body {background-color: #FFD1BA; text-align:center;}");
+    str += F(".footer {background-color: #FF884C;margin :auto; clear:both; height: 50px; padding:25px;}");
+    str += F(".row {clear:both; padding 50px 0px 50px 0;margin: 0 auto;}");
+    str += F(".main {min-height: 200px;display: inline-block; margin:auto; position:relative; text-align:}");
+    str += F(".container {padding: 80px 0px 80px 0px;margin: 0 auto;}");
     str += F("</style>");
   }
   else
     str += F("<link rel=\"stylesheet\" type=\"text/css\" href=\"esp.css\">");
-
+  str += F("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />");
   str += F("</head>");
 
-  str += F("<h1>Welcome to Smart Feeder: ");
- // str += Settings.Name;
-
-  str += F("</h1>");
 
   if (showMenu)
   {
-    str += F("<BR><a class=\"button-menu\" href=\".\">Main</a>");
-    str += F("<a class=\"button-menu\" href=\"config\">Config</a>");
-    str += F("<a class=\"button-menu\" href=\"hardware\">Status</a>");
-//    if (Settings.UseRules)
-//      str += F("<a class=\"button-menu\" href=\"rules\">Rules</a>");
-    str += F("<a class=\"button-menu\" href=\"tools\">Tools</a><BR><BR>");
+    str += F("<BR><div class=\"menu\">");
+    str += F("<h1>Smart Feeder</h1>");
+    str += F("<div class=\"row\">");
+    str += F("<div class=\"menu-item\"><a class=\"button-menu\" href=\".\">Home</a></div>");
+    str += F("<div class=\"menu-item\"><a class=\"button-menu\" href=\"config\">Configure</a></div>");
+  //  str += F("<div class=\"menu-item\"><a class=\"button-menu\" href=\"about\">about</a></div>");
+    str += F("</div>");
+    str += F("</div>");
+
   }
 }
 
@@ -302,7 +258,7 @@ void addHeader(boolean showMenu, String& str)
 //********************************************************************************
 void addFooter(String& str)
 {
-  str += F("<br>v1.0a<br>Press here to <a href=\"/login?DISCONNECT=YES\">logout</a></body></html>");
+  str += F("<div class=\"footer\">Press here to <a class=\"button-link\" href=\"/login?DISCONNECT=YES\">logout</a></body></html></div>");
 
   //<a href=\"www.altech-inspired.ro\">Powered by Altech Inspired</a>
 }

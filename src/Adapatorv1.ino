@@ -21,35 +21,9 @@ Servo servoMain;
 #include <DNSServer.h>            //Local DNS Server used for redirecting all requests to the configuration portal
 #include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager WiFi Configuration Magic
 #include <ArduinoJson.h>          //https://github.com/bblanchon/ArduinoJson
+#include <CMMC_OTA.h>
+CMMC_OTA ota;
 
-
-// for your motor
-const int IN1 = 16;
-const int IN2 = 5;
-const int IN3 = 4;
-const int IN4 = 0;
-
-// defined for button1
-const int button1 = 12;
-boolean buttonActive = false;
-boolean longPressActive = false;
-boolean button1Active = false;
-long buttonTimer = 0;
-long buttonTime = 3000;
-// defined for button1
-
-// alt button
-int buttonState = 0;     // current state of the button
-int lastButtonState = 0; // previous state of the button
-int startPressed = 0;    // the time button was pressed
-int endPressed = 0;      // the time button was released
-int timeHold = 0;        // the time button is hold
-int timeReleased = 0;    // the time button is released
-// alt button
-
-// defined for status LED
-const int ledPin = 14;       // the pin that the LED is attached to
-//
 
 // defined for NTP
 unsigned int localPort = 2390;      // local port to listen for UDP packets
@@ -89,6 +63,44 @@ void saveConfigCallback () {
 extern "C" {
 #include "user_interface.h"
 }
+
+
+
+// defined for button1
+const int button1 = 12;
+boolean buttonActive = false;
+boolean longPressActive = false;
+boolean button1Active = false;
+long buttonTimer = 0;
+long buttonTime = 3000;
+// defined for button1
+
+// alt button
+int buttonState = 0;     // current state of the button
+int lastButtonState = 0; // previous state of the button
+int startPressed = 0;    // the time button was pressed
+int endPressed = 0;      // the time button was released
+int timeHold = 0;        // the time button is hold
+int timeReleased = 0;    // the time button is released
+// alt button
+
+
+// defined for status LED
+//const int ledPin = 14;       // the pin that the LED is attached to
+//
+
+#define ledPin 14
+
+
+// for your motor
+//const int IN1 = 16;
+//const int IN2 = 5;
+//const int IN3 = 4;
+//const int IN4 = 0;
+#define IN1 16
+#define IN2 5
+#define IN3 4
+#define IN4 0
 
 
 void setup(void) {
@@ -225,9 +237,9 @@ void setup(void) {
   udp.begin(localPort);
   Serial.print("Local port: ");
   Serial.println(udp.localPort());
-  do_sendNTPpacket();
+  //do_sendNTPpacket();
 
-  mqttSetup();
+  //mqttSetup();
 
   Alarm.alarmRepeat(7,00,0, MorningAlarm);  // 8:30am every day
   Alarm.alarmRepeat(17,30,0,EveningAlarm);  // 5:45pm every day
@@ -240,6 +252,8 @@ void setup(void) {
   ledState("blinkTwice");
   ledState("On");
 
+  ota.init();
+
 
 }
 
@@ -251,63 +265,66 @@ void loop(void) {
   for (int timeCount = 0; timeCount < 100; timeCount++){
     server.handleClient();
     delay(100);
+    buttonDo();
+  }
+  ESP.getCpuFreqMHz();
+  //stepperFeed(4096,1);
+  //mqtt_loop();
+//delay(500);
+ota.loop();
+
+}
 
 
+void buttonDo() {
+// read the pushbutton input pin:
+ buttonState = digitalRead(button1);
 
-    // read the pushbutton input pin:
-     buttonState = digitalRead(button1);
+ // button state changed
+ if (buttonState != lastButtonState) {
 
-     // button state changed
-     if (buttonState != lastButtonState) {
+     // the button was just pressed
+     if (buttonState == HIGH) {
+         startPressed = millis();
+         timeReleased = startPressed - endPressed;
 
-         // the button was just pressed
-         if (buttonState == HIGH) {
-             startPressed = millis();
-             timeReleased = startPressed - endPressed;
+         if (timeReleased >= 500 && timeReleased < 1000) {
+             Serial.println("Button idle for half a second");
+         }
 
-             if (timeReleased >= 500 && timeReleased < 1000) {
-                 Serial.println("Button idle for half a second");
-             }
+         if (timeReleased >= 2800 && timeReleased <=6000) {
+             Serial.println("Button idle for 3 seconds");
+         }
 
-             if (timeReleased >= 2800 && timeReleased <=6000) {
-                 Serial.println("Button idle for 3 seconds");
-             }
+         if (timeReleased >= 9000 && timeReleased <= 10500) {
+             Serial.println("Button idle for 10 seconds");
+         }
 
-             if (timeReleased >= 9000 && timeReleased <= 10500) {
-                 Serial.println("Button idle for 10 seconds");
-             }
+     // the button was just released
+     } else {
+         endPressed = millis();
+         timeHold = endPressed - startPressed;
 
-         // the button was just released
-         } else {
-             endPressed = millis();
-             timeHold = endPressed - startPressed;
+         if (timeHold >= 100 && timeHold < 1000) {
+             Serial.println("Button hold for less than a second");
+             stepperFeed(2048,1);
+         }
 
-             if (timeHold >= 100 && timeHold < 1000) {
-                 Serial.println("Button hold for less than a second");
-                 stepperFeed(2048,1);
-             }
+         if (timeHold >= 2800 && timeHold <= 6000) {
+             Serial.println("Button hold for 3 seconds");
+            yield();
+         }
 
-             if (timeHold >= 2800 && timeHold <= 6000) {
-                 Serial.println("Button hold for 3 seconds");
-                 yield();
-             }
-
-             if (timeHold >= 9000 && timeHold <= 10500) {
-                 Serial.println("Button hold for 10 seconds");
-             }
-
+         if (timeHold >= 9000 && timeHold <= 10500) {
+             Serial.println("Button hold for 10 seconds");
+             //wifiManager.resetSettings();
          }
 
      }
 
-     // save the current state as the last state,
-     //for next time through the loop
-     lastButtonState = buttonState;
+ }
 
-
-
-  }
-  ESP.getCpuFreqMHz();
-  //mqtt_loop();
-//delay(500);
+ // save the current state as the last state,
+ //for next time through the loop
+ lastButtonState = buttonState;
 }
