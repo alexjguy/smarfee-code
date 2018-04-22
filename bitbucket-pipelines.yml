@@ -15,6 +15,7 @@ pipelines:
   default:
     - step:
         script:
+          - cat /root/.ssh/config
           - echo "Host git-codecommit.*.amazonaws.com" > /root/.ssh/config
           - echo "  User ${AWS_SSH_ID}" >> /root/.ssh/config
           - echo "  IdentityFile /opt/atlassian/pipelines/agent/data/id_rsa" >> /root/.ssh/config
